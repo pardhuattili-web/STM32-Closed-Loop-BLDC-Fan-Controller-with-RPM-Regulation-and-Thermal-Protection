@@ -1,29 +1,20 @@
 # Architecture
 
-## Separation of concerns
+- `firmware/core/fan_control.c`: portable algorithms; no HAL dependencies.
+- `firmware/platform/`: target-specific ADC, timer capture, PWM and UART adapters.
+- `firmware/app/`: demo and application orchestration.
+- `sim/`: deterministic first-order fan plant for repeatable experiments.
+- `tests/`: portable C and Python tests.
 
-- `firmware/core/fan_control.c`: portable algorithms that can be built and tested on a host.
-- `firmware/platform/`: STM32 HAL adapters for ADC, timer input capture, PWM, and UART.
-- `firmware/app/`: application orchestration and host demo.
-- `sim/`: first-order fan model for repeatable algorithm experiments.
-- `tests/`: host-side unit and model tests.
+## Suggested periodic control sequence
 
-## Suggested periodic execution
+1. Consume the latest valid, filtered temperature.
+2. Interpolate requested RPM from the thermal schedule.
+3. Consume a fresh tachometer measurement.
+4. Update PI only when the measurement is valid.
+5. Apply duty limits and any fan-specific startup policy.
+6. Update fault state and publish diagnostics.
 
-Run a periodic control step at a fixed frequency selected for the plant and measurement rates (for example, 10–20 Hz for an initial fan experiment). Each step should:
-1. consume the latest valid filtered temperature;
-2. calculate the requested speed from the thermal schedule;
-3. consume a fresh tachometer measurement;
-4. update the PI output only when the measurement is valid;
-5. apply duty limits and startup behavior;
-6. update fault state and publish diagnostics.
+Use timer hardware for PWM and tach capture; avoid blocking delays in the control path. Protect snapshots shared with ADC-DMA or timer callbacks using appropriate atomics or brief critical sections.
 
-Use timer hardware for PWM and tachometer capture. Avoid blocking delays in the control path.
-
-## Concurrency
-
-If ADC DMA and timer capture callbacks update values asynchronously, transfer snapshots to the control task/loop using atomic access or a short critical section appropriate to the MCU. Do not read partially updated multiword structures without a synchronization plan.
-
-## Safe policy
-
-The policy for an invalid temperature or tachometer signal must be application-specific. For a cooling fan, maximum requested cooling can be a reasonable fail-safe only if the fan interface and powered system support it. Keep a persistent fault indicator and document restart/recovery criteria.
+The safe response to an invalid temperature/tach signal is application-specific. Maximum cooling can be appropriate only when the fan interface and system can support it. Keep faults visible and define recovery criteria.
