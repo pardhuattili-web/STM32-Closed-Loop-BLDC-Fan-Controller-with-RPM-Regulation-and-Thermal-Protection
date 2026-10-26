@@ -1,0 +1,13 @@
+build/
+__pycache__/
+.pytest_cache/
+*.py[cod]
+*.elf
+*.hex
+*.bin
+*.map
+*.o
+*.d
+.vscode/
+.idea/
+.DS_Store
