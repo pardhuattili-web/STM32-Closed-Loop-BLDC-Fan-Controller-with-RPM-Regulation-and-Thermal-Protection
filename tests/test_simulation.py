@@ -1,9 +1,6 @@
 import pytest
-
 from sim.fan_model import FanModel
-
-
-def test_fan_rpm_moves_toward_command():
+def test_fan_rpm_converges_to_command():
     fan = FanModel()
     first = fan.step(50.0, 0.1)
     assert first > 0.0
@@ -13,11 +10,7 @@ def test_fan_rpm_moves_toward_command():
         assert current >= previous
         previous = current
     assert current == pytest.approx(1600.0, abs=1.0)
-
-
-def test_fan_model_rejects_invalid_input():
+def test_model_rejects_bad_inputs():
     fan = FanModel()
-    with pytest.raises(ValueError):
-        fan.step(101.0, 0.1)
-    with pytest.raises(ValueError):
-        fan.step(50.0, 0.0)
+    with pytest.raises(ValueError): fan.step(101.0, 0.1)
+    with pytest.raises(ValueError): fan.step(50.0, 0.0)
